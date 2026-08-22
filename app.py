@@ -60,7 +60,7 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
         factor_vd = 2.0
     else:
         v_numerical = float(volt_config.split('/')[0].replace('V',''))
-        v_line = v_numerical * 1.732 if v_numerical in [115, 120, 227, 277] else v_numerical
+        v_line = v_numerical * 1.732 if v_numerical in [115, 120, 277] else v_numerical
         feeder_amps = total_net_va / (v_line * 1.732)
         factor_vd = 1.732
 
@@ -131,6 +131,9 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
     calcs['allowable_conduit_area_sqin'] = optimized_conduit_selection[1]
     calcs['conduit_fill_percentage'] = (combined_wires_area / optimized_conduit_selection[1]) * 40.0
 
+    calcs['lighting_circuits'] = max(1, int(round(lighting_va / 1800.0 + 0.49)))
+    calcs['receptacle_circuits'] = max(1, int(round((outlets * 180.0) / 2400.0 + 0.49)))
+
     return calcs
 
 if api_key:
@@ -142,50 +145,49 @@ if api_key:
         
         if st.button("🔥 INITIATE AUTONOMOUS ELECTRICAL COMPILATION"):
             with st.spinner("Executing structural data layout analysis..."):
-                try:
-                    system_instruction = (
-                        "You act exclusively as a high-precision industrial electrical parser for structural text and sheets. "
-                        "Your sole purpose is to scan the uploaded document data, count physical layout nodes, and extract textual dimensions. "
-                        "You are strictly forbidden from performing mathematical calculations, wiring ampacity logic, or explaining code blocks. "
-                        "Your response output MUST be exclusively a single valid JSON block without any surrounding text or markdown formatting tags."
-                    )
-                    prompt = (
-                        "Analyze this document thoroughly. Parse structural configurations and dimensions into this exact JSON schema format:\n"
-                        "{\n"
-                        "  \"area_sqft\": 2500,\n"
-                        "  \"outlet_count\": 12,\n"
-                        "  \"ac_total_va\": 3500,\n"
-                        "  \"motors_total_va\": 1500\n"
-                        "}"
-                    )
-                    
-                    model = genai.GenerativeModel(model_name="gemini-3.5-flash", system_instruction=system_instruction)
-                    
-                    if "pdf" in uploaded_file.type:
-                        response = model.generate_content([prompt, {"mime_type": "application/pdf", "data": uploaded_file.read()}])
-                    elif "dwg" in uploaded_file.name.lower():
-                        response = model.generate_content([prompt, {"mime_type": "application/octet-stream", "data": uploaded_file.read()}])
-                    else:
-                        image = Image.open(uploaded_file)
-                        response = model.generate_content([prompt, image])
-                    
-                    clean_json = re.sub(r"```json|```", "", response.text).strip()
-                    parsed_data = json.loads(clean_json)
-                    
-                    st.success("🛸 Data Node Matrix Extraction Succeeded")
-                    
-                    metrics = run_god_mode_industrial_engine(parsed_data, system_phase, selected_voltage, run_distance, conduit_type)
-                    
-                    st.markdown("### 📋 Automated Data Extractions")
-                    st.json(parsed_data)
-                    
-                    st.markdown("### ⚙️ Hardcoded Sizing Specifications (100% Breaker Rating Multiplier)")
-                    st.write(f"• Demand Current Draw on Service: **{metrics['feeder_amps']:.2f} Amps**")
-                    st.write(f"• Overcurrent Breaker Trip Rating (100% Load Match): **{metrics['main_breaker']} A**")
-                    st.write(f"• Service Intake Wire Configuration Run: **{metrics['feeder_wire']}**")
-                    
-                    st.markdown("### 📉 Feeder Voltage Drop Sub-Sheet")
-                    st.write(f"• Calculated Feeder Voltage Loss: **{metrics['vd_volts']:.2f} Volts**")
-                    st.write(f"• True Vector Ratio Percentage Loss: **{metrics['vd_percent']:.2f}%**")
-                    st.write(f"• Evaluation Compliance Status Profile: **{metrics['vd_status']}**")
-                    
+                system_instruction = (
+                    "You act exclusively as a high-precision industrial electrical parser for structural text and sheets. "
+                    "Your sole purpose is to scan the uploaded document data, count physical layout nodes, and extract textual dimensions. "
+                    "You are strictly forbidden from performing mathematical calculations, wiring ampacity logic, or explaining code blocks. "
+                    "Your response output MUST be exclusively a single valid JSON block without any surrounding text or markdown formatting tags."
+                )
+                prompt = (
+                    "Analyze this document thoroughly. Parse structural configurations and dimensions into this exact JSON schema format:\n"
+                    "{\n"
+                    "  \"area_sqft\": 2500,\n"
+                    "  \"outlet_count\": 12,\n"
+                    "  \"ac_total_va\": 3500,\n"
+                    "  \"motors_total_va\": 1500\n"
+                    "}"
+                )
+                
+                model = genai.GenerativeModel(model_name="gemini-3.5-flash", system_instruction=system_instruction)
+                
+                if "pdf" in uploaded_file.type:
+                    response = model.generate_content([prompt, {"mime_type": "application/pdf", "data": uploaded_file.read()}])
+                elif "dwg" in uploaded_file.name.lower():
+                    response = model.generate_content([prompt, {"mime_type": "application/octet-stream", "data": uploaded_file.read()}])
+                else:
+                    image = Image.open(uploaded_file)
+                    response = model.generate_content([prompt, image])
+                
+                clean_json = re.sub(r"```json|```", "", response.text).strip()
+                parsed_data = json.loads(clean_json)
+                
+                st.success("🛸 Data Node Matrix Extraction Succeeded")
+                
+                metrics = run_god_mode_industrial_engine(parsed_data, system_phase, selected_voltage, run_distance, conduit_type)
+                
+                st.markdown("### 📋 Automated Data Extractions")
+                st.json(parsed_data)
+                
+                st.markdown("### ⚙️ Hardcoded Sizing Specifications (100% Breaker Rating Multiplier)")
+                st.write(f"• Demand Current Draw on Service: **{metrics['feeder_amps']:.2f} Amps**")
+                st.write(f"• Overcurrent Breaker Trip Rating (100% Load Match): **{metrics['main_breaker']} A**")
+                st.write(f"• Service Intake Wire Configuration Run: **{metrics['feeder_wire']}**")
+                
+                st.markdown("### 📉 Feeder Voltage Drop Sub-Sheet")
+                st.write(f"• Calculated Feeder Voltage Loss: **{metrics['vd_volts']:.2f} Volts**")
+                st.write(f"• True Vector Ratio Percentage Loss: **{metrics['vd_percent']:.2f}%**")
+                st.write(f"• Evaluation Compliance Status Profile: **{metrics['vd_status']}**")
+                
