@@ -43,7 +43,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
         [Paragraph("<b>Target Operating Voltage:</b>", body_style), Paragraph(volt, body_style)],
         [Paragraph("<b>Code Grounding Baseline:</b>", body_style), Paragraph("National Electrical Code (NEC 2023 Edition - Strictly Sourced)", body_style)]
     ]
-    t_meta = Table(meta_table, colWidths=)
+    t_meta = Table(meta_table, colWidths=[150, 350])
     t_meta.setStyle(TableStyle([('BACKGROUND', (0,0), (0,-1), colors.HexColor('#F2F4F7')), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('PADDING', (0,0), (-1,-1), 6)]))
     story.append(t_meta)
     
@@ -56,7 +56,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
         [Paragraph("Duplex Receptacle Node Count", body_style), Paragraph(f"{raw_data.get('outlet_count', 'Not Found')} Nodes", body_style)],
         [Paragraph("HVAC Cooling Machinery Base Load", body_style), Paragraph(f"{raw_data.get('ac_total_va', 'Not Found')} VA", body_style)]
     ]
-    t_load = Table(load_table, colWidths=)
+    t_load = Table(load_table, colWidths=[200, 300])
     t_load.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EDF2F7')), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('PADDING', (0,0), (-1,-1), 5)]))
     story.append(t_load)
     
@@ -145,4 +145,3 @@ if api_key:
                         "──[ UTILITY SOURCE SUPPLY ]──► [ REGISTERED PUC METER ]\n"
                         f"                                         │\n"
                         f"                       VERIFIED BREAKER: {parsed_nec_verification.get('main_breaker_rating', 'UNVERIFIED')}\n"
-                        f"                                         │\n"
