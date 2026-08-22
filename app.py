@@ -7,7 +7,7 @@ import re
 
 st.set_page_config(page_title="PUC Belize AI Engine Pro", layout="wide")
 st.title("🛡️ Industrial Electrical Engineering Platform - PUC Belize")
-st.subheader("Autonomous Multi-Voltage, Parallel Feeder Conduit Fill & Voltage Drop Calculations (NEC Compliant)")
+st.subheader("Autonomous Multi-Voltage, Parallel Feeder Conduit Fill & Voltage Drop Calculations")
 
 # --- SIDEBAR INTERFACE ---
 st.sidebar.header("🔑 API Connection Configuration")
@@ -28,7 +28,7 @@ else:
 
 st.sidebar.header("📐 Physical Field Variables")
 run_distance = st.sidebar.number_input("One-Way Feeder Distance Runway (Feet):", min_value=1.0, value=150.0, step=5.0)
-conduit_type = st.sidebar.selectbox("Rigid Raceway Duct Enclosure Material (NEC Chapter 9):", ["Schedule 40 PVC Conduit", "Schedule 80 PVC Conduit", "Rigid PVC Conduit (RMC)"])
+conduit_type = st.sidebar.selectbox("Rigid Raceway Enclosure Material:", ["Schedule 40 PVC Conduit", "Schedule 80 PVC Conduit", "Rigid PVC Conduit (RMC)"])
 
 st.sidebar.header("📝 Official Submission Metadata")
 engineer_name = st.sidebar.text_input("Authorizing Licensed Engineer:", "Ing. Doraine Flowers")
@@ -107,10 +107,10 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
     
     calcs['vd_volts'] = voltage_drop_total
     calcs['vd_percent'] = vd_percentage
-    calcs['vd_status'] = "PASSED (Within Strict Feeder Limits)" if vd_percentage <= 3.0 else "WARNING: EXCEEDS LIMITS"
+    calcs['vd_status'] = "PASSED (Within 3% Limit)" if vd_percentage <= 3.0 else "WARNING: EXCEEDS LIMITS"
 
     total_conductors_run = 4 if "Three-Phase" in phase_config else 3
-    combined_wires_area = area_wire * total_conductors_run
+    combined_wires_area = area_wire * total_conductors_run * num_runs
     
     conduit_allowable_limits = [
         ["1/2\" Conduit Pipe", 0.122],
@@ -129,7 +129,7 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
     calcs['conduit_diameter'] = optimized_conduit_selection[0]
     calcs['total_wire_area_sqin'] = combined_wires_area
     calcs['allowable_conduit_area_sqin'] = optimized_conduit_selection[1]
-    calcs['conduit_fill_percentage'] = (combined_wires_area / (optimized_conduit_selection[1] / 0.40)) * 100.0
+    calcs['conduit_fill_percentage'] = (combined_wires_area / optimized_conduit_selection[1]) * 40.0
 
     return calcs
 
@@ -176,17 +176,16 @@ if api_key:
                     
                     metrics = run_god_mode_industrial_engine(parsed_data, system_phase, selected_voltage, run_distance, conduit_type)
                     
-                    c_out1, c_out2 = st.columns(2)
-                    with c_out1:
-                        st.markdown("### 📋 Automated Data Extractions")
-                        st.json(parsed_data)
-                    with c_out2:
-                        st.markdown("### ⚙️ Hardcoded Sizing Specifications")
-                        st.write(f"• Demand Current Draw on Service: **{metrics['feeder_amps']:.2f} Amps**")
-                        st.write(f"• Overcurrent Breaker Trip Rating (100% Sizing): **{metrics['main_breaker']} A**")
-                        st.write(f"• Service Intake Wire Configuration Run: **{metrics['feeder_wire']}**")
+                    st.markdown("### 📋 Automated Data Extractions")
+                    st.json(parsed_data)
                     
-                    st.markdown("### 📈 Sourced Calculation Sheets & Raceway Packing Optimization Logs")
-                    col_sheet1, col_sheet2 = st.columns(2)
-                    with col_sheet1:
-                        st.error("📉 Feeder Voltage Drop Sub-Sheet")
+                    st.markdown("### ⚙️ Hardcoded Sizing Specifications (100% Breaker Rating Multiplier)")
+                    st.write(f"• Demand Current Draw on Service: **{metrics['feeder_amps']:.2f} Amps**")
+                    st.write(f"• Overcurrent Breaker Trip Rating (100% Load Match): **{metrics['main_breaker']} A**")
+                    st.write(f"• Service Intake Wire Configuration Run: **{metrics['feeder_wire']}**")
+                    
+                    st.markdown("### 📉 Feeder Voltage Drop Sub-Sheet")
+                    st.write(f"• Calculated Feeder Voltage Loss: **{metrics['vd_volts']:.2f} Volts**")
+                    st.write(f"• True Vector Ratio Percentage Loss: **{metrics['vd_percent']:.2f}%**")
+                    st.write(f"• Evaluation Compliance Status Profile: **{metrics['vd_status']}**")
+                    
