@@ -7,7 +7,7 @@ import re
 
 st.set_page_config(page_title="PUC Belize AI Engine Pro", layout="wide")
 st.title("🛡️ Industrial Electrical Engineering Platform - PUC Belize")
-st.subheader("Autonomous Multi-Voltage, Parallel Feeder Conduit Fill & Voltage Drop Calculations (NEC 2026 Compliant)")
+st.subheader("Autonomous Multi-Voltage, Parallel Feeder Conduit Fill & Voltage Drop Calculations (NEC Compliant)")
 
 # --- SIDEBAR INTERFACE ---
 st.sidebar.header("🔑 API Connection Configuration")
@@ -43,14 +43,13 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
     ac_va = float(raw_data.get('ac_total_va', 3500))
     motors_va = float(raw_data.get('motors_total_va', 1500))
     
-    st_breakers =
+    st_breakers = [15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100, 110, 125, 150, 175, 200, 225, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000, 1200, 1600, 2000, 2500, 3000, 4000, 5000, 6000]
     
     lighting_va = area * 3.5 if "Three-Phase" in phase_config else area * 3.0
     appliance_va = 4500.0 if "Single" in phase_config or "Split" in phase_config else 0.0
     total_net_va = lighting_va + appliance_va + ac_va + (motors_va * 1.25)
     calcs['total_va'] = total_net_va
     
-    # ── PHASE VOLTAGE VECTOR PARSING ──
     if "Single-Phase" in phase_config:
         v_line = float(re.sub(r'[^\d.]', '', volt_config))
         feeder_amps = total_net_va / v_line
@@ -60,19 +59,16 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
         feeder_amps = total_net_va / v_line
         factor_vd = 2.0
     else:
-        v_numerical = float(volt_config.split('/').replace('V',''))
-        v_line = v_numerical * 1.732 if v_numerical in else v_numerical
+        v_numerical = float(volt_config.split('/')[0].replace('V',''))
+        v_line = v_numerical * 1.732 if v_numerical in [115, 120, 227, 277] else v_numerical
         feeder_amps = total_net_va / (v_line * 1.732)
         factor_vd = 1.732
 
-    # Sizing Conductor & Overcurrent Protection Device Multiplied by exactly 100% Sizing Criteria
     breaker_load_profile = feeder_amps * 1.00
     main_breaker = next((x for x in st_breakers if x >= breaker_load_profile), 6000)
     calcs['main_breaker'] = main_breaker
     calcs['feeder_amps'] = feeder_amps
 
-    # ── STATIC NEC TABLE DATA LOOKUP ARRAYS (HALLUCINATION-FREE) ──
-    # Wire properties mapping: [Wire Size Str string, Ampacity at 75C, Resistance R per 1000ft, Area sq.in per wire]
     wire_properties_matrix = [
         ["#14 AWG CU", 15, 3.07, 0.0097],
         ["#12 AWG CU", 20, 1.93, 0.0133],
@@ -91,39 +87,31 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
         ["#600 kcmil CU", 420, 0.0214, 0.8676]
     ]
 
-    # Select base wire sizing matching raw ampacity rating directly via 100% capacity lookup loop
     selected_wire_profile = next((w for w in wire_properties_matrix if w[1] >= main_breaker), wire_properties_matrix[-1])
     wire_label = selected_wire_profile[0]
     r_val = selected_wire_profile[2]
     area_wire = selected_wire_profile[3]
     
-    # Calculate exact parallel runs if main breaker load boundary crosses maximum standard thresholds
     num_runs = 1
     if main_breaker > 400:
         num_runs = (main_breaker // 380) + 1
-        selected_wire_profile = wire_properties_matrix[-2] # Default fallback to balanced parallel 500 kcmil arrays
+        selected_wire_profile = wire_properties_matrix[-2]
         wire_label = f"Parallel Run Array: {num_runs} Runs of (3x {selected_wire_profile[0]})"
         r_val = selected_wire_profile[2] / num_runs
         area_wire = selected_wire_profile[3]
     
     calcs['feeder_wire'] = wire_label
 
-    # ── VOLTAGE DROP CALCULATION SUB-SHEET ──
-    # Formula: VD = (factor_vd * L * R * I) / 1000
     voltage_drop_total = (factor_vd * distance * r_val * feeder_amps) / 1000.0
     vd_percentage = (voltage_drop_total / v_line) * 100.0
     
     calcs['vd_volts'] = voltage_drop_total
     calcs['vd_percent'] = vd_percentage
-    calcs['vd_status'] = "PASSED (Within Strict 3% NEC Feeder Limit Guideline)" if vd_percentage <= 3.0 else "WARNING: COMPLIANCE EXCEEDED (Requires Upsized Conductor Array Cross Section)"
+    calcs['vd_status'] = "PASSED (Within Strict Feeder Limits)" if vd_percentage <= 3.0 else "WARNING: EXCEEDS LIMITS"
 
-    # ── CONDUIT FILL RACING OPTIMIZATION SUB-SHEET ──
-    # Total conductors needed inside enclosure run (3 phase conductors + 1 neutral standard)
     total_conductors_run = 4 if "Three-Phase" in phase_config else 3
     combined_wires_area = area_wire * total_conductors_run
     
-    # Dynamic total interior dimensional area allowable cross section under 40% boundary fill (NEC Chapter 9, Table 4)
-    # Mapping output format: [Duct Size Label, 40% Area boundary threshold capacity in sq.in]
     conduit_allowable_limits = [
         ["1/2\" Conduit Pipe", 0.122],
         ["3/4\" Conduit Pipe", 0.213],
@@ -145,17 +133,15 @@ def run_god_mode_industrial_engine(raw_data, phase_config, volt_config, distance
 
     return calcs
 
-# --- RUNTIME PIPELINE CONTROLLER ---
 if api_key:
     genai.configure(api_key=api_key)
-    
-    uploaded_file = st.file_uploader("Upload blueprint diagram sheet or multi-page text layout document (PDF, DWG, PNG, JPG):", type=["pdf", "dwg", "png", "jpg", "jpeg"])
+    uploaded_file = st.file_uploader("Upload blueprint layout or document (PDF, DWG, PNG, JPG):", type=["pdf", "dwg", "png", "jpg", "jpeg"])
     
     if uploaded_file:
-        st.info("⚡ Engineering structure schema loaded into local cache repository runtime.")
+        st.info("⚡ Engineering document loaded into the analysis pipeline container.")
         
-        if st.button("🔥 INITIATE AUTONOMOUS ELECTRICAL COMPILATION & PACKAGING"):
-            with st.spinner("Analyzing infrastructure parameters pixel-by-pixel..."):
+        if st.button("🔥 INITIATE AUTONOMOUS ELECTRICAL COMPILATION"):
+            with st.spinner("Executing structural data layout analysis..."):
                 try:
                     system_instruction = (
                         "You act exclusively as a high-precision industrial electrical parser for structural text and sheets. "
@@ -173,7 +159,7 @@ if api_key:
                         "}"
                     )
                     
-                    model = genai.GenerativeModel(model_name="gemini-2.5-flash", system_instruction=system_instruction)
+                    model = genai.GenerativeModel(model_name="gemini-3.5-flash", system_instruction=system_instruction)
                     
                     if "pdf" in uploaded_file.type:
                         response = model.generate_content([prompt, {"mime_type": "application/pdf", "data": uploaded_file.read()}])
@@ -188,3 +174,19 @@ if api_key:
                     
                     st.success("🛸 Data Node Matrix Extraction Succeeded")
                     
+                    metrics = run_god_mode_industrial_engine(parsed_data, system_phase, selected_voltage, run_distance, conduit_type)
+                    
+                    c_out1, c_out2 = st.columns(2)
+                    with c_out1:
+                        st.markdown("### 📋 Automated Data Extractions")
+                        st.json(parsed_data)
+                    with c_out2:
+                        st.markdown("### ⚙️ Hardcoded Sizing Specifications")
+                        st.write(f"• Demand Current Draw on Service: **{metrics['feeder_amps']:.2f} Amps**")
+                        st.write(f"• Overcurrent Breaker Trip Rating (100% Sizing): **{metrics['main_breaker']} A**")
+                        st.write(f"• Service Intake Wire Configuration Run: **{metrics['feeder_wire']}**")
+                    
+                    st.markdown("### 📈 Sourced Calculation Sheets & Raceway Packing Optimization Logs")
+                    col_sheet1, col_sheet2 = st.columns(2)
+                    with col_sheet1:
+                        st.error("📉 Feeder Voltage Drop Sub-Sheet")
