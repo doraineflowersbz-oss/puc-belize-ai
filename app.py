@@ -47,7 +47,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
         [Paragraph("<b>Target Operating Voltage:</b>", body_style), Paragraph(volt, body_style)],
         [Paragraph("<b>Code Grounding Baseline:</b>", body_style), Paragraph("National Electrical Code (NEC 2023 Edition - Strictly Sourced)", body_style)]
     ]
-    t_meta = Table(meta_table, colWidths=[200, 320])
+    t_meta = Table(meta_table, colWidths=[200, 300])
     t_meta.setStyle(TableStyle([('BACKGROUND', (0,0), (0,-1), colors.HexColor('#F2F4F7')), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('PADDING', (0,0), (-1,-1), 6)]))
     story.append(t_meta)
     
@@ -60,7 +60,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
         [Paragraph("Duplex Receptacle Node Count", body_style), Paragraph(f"{raw_data.get('outlet_count', 'Not Found')} Nodes", body_style)],
         [Paragraph("HVAC Cooling Machinery Base Load", body_style), Paragraph(f"{raw_data.get('ac_total_va', 'Not Found')} VA", body_style)]
     ]
-    t_load = Table(load_table, colWidths=[260, 260])
+    t_load = Table(load_table, colWidths=[250, 250])
     t_load.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EDF2F7')), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('PADDING', (0,0), (-1,-1), 5)]))
     story.append(t_load)
     
@@ -73,7 +73,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
     doc.build(story)
     return pdf_path
 
-# --- INTERFAZ CENTRAL DE ARCHIVOS ---
+# --- CENTRAL FILE CONDUIT INTERFACE ---
 if api_key:
     genai.configure(api_key=api_key)
     
@@ -126,23 +126,25 @@ if api_key:
                         "}"
                     )
                     
-                    # Process based on whether user uploaded a reference document or manual page image
-                    # For cross-document lookup, we pass the extracted file to lock down search scope
                     model_nec = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=nec_instruction)
                     
-                    # Open reference page file safely
                     if hasattr(uploaded_nec_reference, 'type') and "image" in uploaded_nec_reference.type:
                         img_ref = Image.open(uploaded_nec_reference)
                         response_nec = model_nec.generate_content([nec_query_prompt, img_ref])
                     else:
-                        # Fallback parsing strategy for text-based attachments
                         response_nec = model_nec.generate_content([nec_query_prompt, uploaded_nec_reference.read().decode('utf-8', errors='ignore')])
                         
                     clean_nec_json = re.sub(r"```json|```", "", response_nec.text).strip()
                     parsed_nec_verification = json.loads(clean_nec_json)
                     
-                    st.success("🛡️ Stage 2: Strict Reference Lookup Validation Succeeded")
+                    st.success("🛡️ Stage 2: Strict Reference Lookup Verification Succeeded")
                     
-                    # --- DASHBOARD VISUALIZATION ---
+                    # --- DASHBOARD VISUALIZATION CON CORRECCIÓN DE INDENTACIÓN ---
                     col_dash1, col_dash2 = st.columns(2)
                     with col_dash1:
+                        st.markdown("### 📋 Variables Found on Blueprint")
+                        st.json(parsed_blueprint_data)
+                    with col_dash2:
+                        st.markdown("### 🔍 Strict Code Values Located in Document")
+                        st.json(parsed_nec_verification)
+                        
