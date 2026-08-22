@@ -1,4 +1,4 @@
-reportlab
 streamlit
 google-generativeai
 pillow
+reportlab
