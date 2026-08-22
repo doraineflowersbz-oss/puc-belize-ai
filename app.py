@@ -29,7 +29,6 @@ project_location = st.sidebar.text_input("Project Site Location:", "Belize City,
 if api_key:
     genai.configure(api_key=api_key)
     
-    # ACCEPT ALL FORMATS CONCURRENTLY IN ONE CLEAN CONTAINER
     uploaded_file = st.file_uploader("Upload blueprint layout or CAD drawing file (PDF, DWG, PNG, JPG):", type=["pdf", "dwg", "png", "jpg", "jpeg"])
     
     if uploaded_file:
@@ -38,7 +37,6 @@ if api_key:
         if st.button("🔥 INITIATE AUTONOMOUS ELECTRICAL COMPILATION"):
             with st.spinner("Executing structural data layout analysis..."):
                 try:
-                    # STRICT PROMPT FORCING VERIFIED METRICS ONLY
                     system_instruction = (
                         "You act exclusively as a high-precision industrial electrical parser for structural text and sheets. "
                         "Your sole purpose is to scan the uploaded document data, count physical layout nodes, and extract textual dimensions. "
@@ -60,7 +58,6 @@ if api_key:
                     if "pdf" in uploaded_file.type:
                         response = model.generate_content([prompt, {"mime_type": "application/pdf", "data": uploaded_file.read()}])
                     elif "dwg" in uploaded_file.name.lower():
-                        # Direct stream handling for CAD documents
                         response = model.generate_content([prompt, {"mime_type": "application/octet-stream", "data": uploaded_file.read()}])
                     else:
                         image = Image.open(uploaded_file)
@@ -71,7 +68,7 @@ if api_key:
                     
                     st.success("🛸 Layout Scanning Complete")
                     
-                    # --- HARCODED MATH ENGINE (NEC 2023 COMPLIANT) ---
+                    # --- MATH BACKEND ---
                     area = float(parsed_data.get('area_sqft', 2500))
                     outlets = int(parsed_data.get('outlet_count', 12))
                     ac_va = float(parsed_data.get('ac_total_va', 3500))
@@ -104,52 +101,40 @@ if api_key:
                         st.write(f"• Main Overcurrent Protector (Breaker): **{main_breaker} A**")
                         st.write(f"• Main Intake Wire Specification: **{wire_sz}**")
                     
-                    # RENDER CODE SINGLE LINE SCHEMATIC ARRAY
                     st.markdown("### 📊 Automated Single Line Diagram Layout (SLD)")
                     sld_graph = (
-                        f"──[ BELIZE ELECTRICITY LIMITED (BEL) UTILITY INPUT ]──► [ MAIN TRANSFORMER BANK ]\n"
-                        f"                                                                     │\n"
-                        f"                                                     [ 📊 PUC RECORDING REVENUE METER ]\n"
-                        f"                                                                     │\n"
-                        f"                                                     [ 🛑 SWITCHBOARD SERVICE PANEL MAIN OCPD: {main_breaker}A ]\n"
-                        f"                                                                     │\n"
+                        "──[ BELIZE ELECTRICITY LIMITED (BEL) UTILITY INPUT ]──► [ MAIN TRANSFORMER BANK ]\n"
+                        "                                                                     │\n"
+                        "                                                     [ PUC RECORDING REVENUE METER ]\n"
+                        "                                                                     │\n"
+                        f"                                                     [ SWITCHBOARD SERVICE PANEL MAIN OCPD: {main_breaker}A ]\n"
+                        "                                                                     │\n"
                         f"                                                          FEEDER LINE: {wire_sz}\n"
-                        f"                                                                     │\n"
-                        f"                                                                     ▼\n"
-                        f"                                                     ⚙️ INTERNAL MAIN DISTRIBUTION PANELBOARD\n"
-                        f"                                                      ├─► Branched Path 1: General Lighting ── Breaker: 1x20A ── Wire: #12 AWG\n"
-                        f"                                                      ├─► Branched Path 2: Receptacle Loads ── Breaker: 1x20A ── Wire: #12 AWG\n"
+                        "                                                                     │\n"
+                        "                                                                     ▼\n"
+                        "                                                     INTERNAL MAIN DISTRIBUTION PANELBOARD\n"
+                        "                                                      ├─► Branched Path 1: General Lighting ── Breaker: 1x20A ── Wire: #12 AWG\n"
+                        "                                                      ├─► Branched Path 2: Receptacle Loads ── Breaker: 1x20A ── Wire: #12 AWG\n"
                         f"                                                      └─► Branched Path 3: HVAC Compressor Dedicated Node ── Breaker: 1x{main_breaker}A\n"
                     )
                     st.code(sld_graph, language="text")
                     
-                    # --- COMPILING ABSOLUTE MULTI-PAGE HTML REPORT CONTAINER ---
-                    html_report = f"""
-                    <html>
-                    <head>
-                    <style>
-                        body {{ font-family: Arial, sans-serif; margin: 40px; color: #333; }}
-                        h1 {{ color: #002855; border-bottom: 2px solid #002855; padding-bottom: 5px; }}
-                        h2 {{ color: #0056B3; margin-top: 30px; }}
-                        .metadata {{ background: #F2F4F7; padding: 15px; border-radius: 5px; margin-bottom: 20px; }}
-                        .metric {{ font-weight: bold; color: #002855; }}
-                        pre {{ background: #F8F9FA; border: 1px solid #DDD; padding: 15px; font-family: monospace; overflow-x: auto; }}
-                    </style>
-                    </head>
-                    <body>
-                        <h1>PUBLIC UTILITIES COMMISSION (PUC) - BELIZE</h1>
-                        <h3>OFFICIAL ELECTRICAL SUBMISSION INSPECTION PACKAGE</h3>
-                        
-                        <div class="metadata">
-                            <p><b>Authorizing Licensed Engineer:</b> {engineer_name}</p>
-                            <p><b>Project Developer / Client Name:</b> {client_name}</p>
-                            <p><b>Project Site Location:</b> {project_location}</p>
-                            <p><b>System Electrical Topology:</b> {system_phase} @ {selected_voltage}</p>
-                            <p><b>Regulatory Framework:</b> National Electrical Code (NEC 2023)</p>
-                        </div>
-                        
-                        <h2>DOCUMENT 01: SYSTEM FEEDER METRIC CALCULATIONS</h2>
-                        <p>• Evaluated Construction Area: <span class="metric">{area} sq ft</span></p>
-                        <p>• Total Duplex Node Receptacle Outlets: <span class="metric">{outlets} Nodes</span></p>
-                        <p>• Combined HVAC System Load: <span class="metric">{ac_va} VA</span></p>
-                        <p>• Combined Inductive Motor Load: <span class="metric">{motors_va} VA</span></p>
+                    # --- SAFE COMPILATION OF PACKAGED TEXT REPORT PACK ---
+                    report_title = "PUBLIC UTILITIES COMMISSION (PUC) - BELIZE\nOFFICIAL ELECTRICAL SUBMISSION INSPECTION PACKAGE\n\n"
+                    report_meta = f"Engineer: {engineer_name}\nClient: {client_name}\nLocation: {project_location}\nTopology: {system_phase} @ {selected_voltage}\n\n"
+                    report_metrics = f"--- ENGINEERING CALCULATIONS ---\nArea: {area} sq ft\nOutlets: {outlets} Nodes\nHVAC Load: {ac_va} VA\nMotor Load: {motors_va} VA\nTotal Net Demand: {total_net_va:.2f} VA\nLine Current: {feeder_amps:.2f} A\nMain Breaker: {main_breaker}A\nMain Wire Size: {wire_sz}\n\n"
+                    report_diagram = f"--- SINGLE LINE DIAGRAM SCHEMA ---\n{sld_graph}"
+                    
+                    final_package_data = report_title + report_meta + report_metrics + report_diagram
+                    
+                    st.download_button(
+                        label="📥 DOWNLOAD COMPLETED PUC BELIZE OFFICIAL SUBMISSION PACKAGE (.TXT)",
+                        data=final_package_data,
+                        file_name=f"PUC_Belize_Submission_{engineer_name.replace(' ', '_')}.txt",
+                        mime="text/plain"
+                    )
+                except Exception as e:
+                    st.error(f"Execution handling failure: {e}")
+else:
+    st.sidebar.warning("Please input your active Gemini API Key inside the sidebar menu interface to initialize processing systems.")
+
