@@ -4,8 +4,6 @@ from google import generativeai as genai
 from PIL import Image
 import json
 import re
-
-# ReportLab layout modules for clean documentation packaging
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -15,7 +13,6 @@ st.set_page_config(page_title="PUC Belize AI Engine - Pure Search", layout="wide
 st.title("🛡️ Document-Grounded Electrical Intelligence - PUC Belize")
 st.subheader("Strict Reference Lookup Mode: Grounded Parsing directly via NEC 2023 Verification")
 
-# --- SIDEBAR INTERFACE ---
 st.sidebar.header("🔑 System Access Configuration")
 api_key = st.sidebar.text_input("Enter your Gemini API Key:", type="password")
 
@@ -25,7 +22,6 @@ client_name = st.sidebar.text_input("Project Developer / Client Name:", "Belize 
 project_location = st.sidebar.text_input("Project Site Location:", "Belize City, Belize")
 system_voltage = st.sidebar.text_input("Target System Operating Voltage (e.g., 120/240V, 115/230V):", "120/240V")
 
-# --- REPORTLAB REVENUE QUALITY DOCUMENT PACKAGER ---
 def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
     pdf_path = "puc_belize_grounded_submission_package.pdf"
     doc = SimpleDocTemplate(pdf_path, pagesize=letter, rightMargin=45, leftMargin=45, topMargin=45, bottomMargin=45)
@@ -47,7 +43,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
         [Paragraph("<b>Target Operating Voltage:</b>", body_style), Paragraph(volt, body_style)],
         [Paragraph("<b>Code Grounding Baseline:</b>", body_style), Paragraph("National Electrical Code (NEC 2023 Edition - Strictly Sourced)", body_style)]
     ]
-    t_meta = Table(meta_table, colWidths=[200, 300])
+    t_meta = Table(meta_table, colWidths=[200, 320])
     t_meta.setStyle(TableStyle([('BACKGROUND', (0,0), (0,-1), colors.HexColor('#F2F4F7')), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('PADDING', (0,0), (-1,-1), 6)]))
     story.append(t_meta)
     
@@ -60,7 +56,7 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
         [Paragraph("Duplex Receptacle Node Count", body_style), Paragraph(f"{raw_data.get('outlet_count', 'Not Found')} Nodes", body_style)],
         [Paragraph("HVAC Cooling Machinery Base Load", body_style), Paragraph(f"{raw_data.get('ac_total_va', 'Not Found')} VA", body_style)]
     ]
-    t_load = Table(load_table, colWidths=[250, 250])
+    t_load = Table(load_table, colWidths=[260, 260])
     t_load.setStyle(TableStyle([('BACKGROUND', (0,0), (-1,0), colors.HexColor('#EDF2F7')), ('GRID', (0,0), (-1,-1), 0.5, colors.grey), ('PADDING', (0,0), (-1,-1), 5)]))
     story.append(t_load)
     
@@ -73,7 +69,6 @@ def compile_grounded_pdf(raw_data, verified_nec, eng, client, loc, volt):
     doc.build(story)
     return pdf_path
 
-# --- CENTRAL FILE CONDUIT INTERFACE ---
 if api_key:
     genai.configure(api_key=api_key)
     
@@ -90,7 +85,6 @@ if api_key:
         if st.button("🔥 INITIATE GROUNDED DOCUMENT-BASED PROCESSING"):
             with st.spinner("Processing documents simultaneously. Searching strict code references without guessing..."):
                 try:
-                    # PIPELINE STAGE 1: VISION ENGINE EXTRACTS NUMERICAL COUNTS ONLY
                     blueprint_instruction = (
                         "You act as a raw visual counting lens. Your only task is to look at the architectural image and extract physical parameters. "
                         "Do not calculate sizing metrics or guess codes. Output results strictly inside a clean JSON object format."
@@ -109,9 +103,8 @@ if api_key:
                     clean_bp_json = re.sub(r"```json|```", "", response_bp.text).strip()
                     parsed_blueprint_data = json.loads(clean_bp_json)
                     
-                    st.success("🤖 Stage 1: Blueprint Structural Analysis Succeeded")
+                    st.success("Stage 1: Blueprint Structural Analysis Succeeded")
                     
-                    # PIPELINE STAGE 2: REFERENCE ATTACHMENT SEARCH ENGINE (ELIMINATES HALLUCINATION)
                     nec_instruction = (
                         "You are a strict code inspector tool. Your only task is to look at the provided reference code attachment "
                         "and extract exact written specifications matching the query. You are strictly forbidden from referencing "
@@ -134,12 +127,11 @@ if api_key:
                     else:
                         response_nec = model_nec.generate_content([nec_query_prompt, uploaded_nec_reference.read().decode('utf-8', errors='ignore')])
                         
-                    clean_nec_json = re.sub(r"```json|```", "", response_nec.text).strip()
-                    parsed_nec_verification = json.loads(clean_nec_json)
+                    clean_json_nec = re.sub(r"```json|```", "", response_nec.text).strip()
+                    parsed_nec_verification = json.loads(clean_json_nec)
                     
-                    st.success("🛡️ Stage 2: Strict Reference Lookup Verification Succeeded")
+                    st.success("Stage 2: Strict Reference Lookup Verification Succeeded")
                     
-                    # --- DASHBOARD VISUALIZATION CON CORRECCIÓN DE INDENTACIÓN ---
                     col_dash1, col_dash2 = st.columns(2)
                     with col_dash1:
                         st.markdown("### 📋 Variables Found on Blueprint")
@@ -148,3 +140,8 @@ if api_key:
                         st.markdown("### 🔍 Strict Code Values Located in Document")
                         st.json(parsed_nec_verification)
                         
+                    st.markdown("### 📊 Document-Grounded Single Line Diagram (SLD)")
+                    sld_graph = (
+                        f"──[ UTILITY SOURCE SUPPLY ]──► [ REGISTERED PUC METER ]\n"
+                        f"                                         │\n"
+                        f"                       VERIFIED BREAKER: {parsed_nec_verification.get('main_breaker_rating', 'UNVERIFIED')}\n"
