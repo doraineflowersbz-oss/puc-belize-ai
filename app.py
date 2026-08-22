@@ -53,7 +53,7 @@ if api_key:
                         "}"
                     )
                     
-                    model = genai.GenerativeModel(model_name="gemini-1.5-flash", system_instruction=system_instruction)
+                    model = genai.GenerativeModel(model_name="gemini-2.5-flash", system_instruction=system_instruction)
                     
                     if "pdf" in uploaded_file.type:
                         response = model.generate_content([prompt, {"mime_type": "application/pdf", "data": uploaded_file.read()}])
