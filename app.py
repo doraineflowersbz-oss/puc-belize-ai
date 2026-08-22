@@ -22,7 +22,7 @@ if api_key:
         "Si no ves un dato, reporta 0. Responde exclusivamente en un formato estructurado de texto."
     )
     
-    uploaded_file = st.file_input("Sube el plano arquitectónico o diagrama (PNG, JPG):", type=["png", "jpg", "jpeg"])
+    uploaded_file = st.file_uploader("Sube el plano arquitectónico o diagrama (PNG, JPG):", type=["png", "jpg", "jpeg"])
     
     if uploaded_file:
         image = Image.open(uploaded_file)
